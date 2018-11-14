@@ -16,6 +16,7 @@
 #
 
 failsafe=1
+autoDest=0
 while getopts d:f: opt
 do
 {
@@ -50,7 +51,8 @@ shift 2
 if [ -z "$destdir" ]; then
 {
 	mkdir "./${family}"
-	destdir="./${family}"
+	destdir=`realpath "./${family}"`
+	autoDest=1
 }
 else
 {
@@ -71,6 +73,11 @@ fi
 if [ $# -eq 0 ]; then
 {
 	printf >&2 "No file in input. Operation aborted.\n"
+	if [ $autoDest -eq 1 ]; then
+	{
+		rm -rf "${destdir}"
+	}
+	fi
 	exit 1
 }
 fi
