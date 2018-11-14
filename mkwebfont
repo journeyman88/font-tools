@@ -22,6 +22,7 @@ do
 	failsafe=0
 	case "$opt" in
 		f)	family="$OPTARG";;
+		l)      displayStrategy="$OPTARG";;
 		d)	destdir=`realpath "$OPTARG"`;;
 		[?])	printf >&2 "Usage: $0 -d outputdir -f font-family files...\n"
 			exit 1;;
@@ -29,14 +30,50 @@ do
 }
 done
 
+
+if [ -z "$family" ]; then
+{
+        printf >&2 "Need to specify font-family\n"
+	failsafe=1
+}
+fi
+
 if [ $failsafe -gt 0 ]; then
 {
-	printf >&2 "Usage: $0 -d outputdir -f font-family files...\n"
+	printf >&2 "Usage: $0 [-d outputdir] [-l font-display] -f font-family files...\n"
 	exit 1
 }
 fi
 
-shift 4
+shift 2
+
+if [ -z "$destdir" ]; then
+{
+	mkdir "./${family}"
+	destdir="./${family}"
+}
+else
+{
+	shift 2
+}
+fi
+
+if [ -z "$displayStrategy" ]; then
+{
+	displayStrategy="auto"
+}
+else
+{
+	shift 2
+}
+fi
+
+if [ $# -eq 0 ]; then
+{
+	printf >&2 "No file in input. Operation aborted.\n"
+	exit 1
+}
+fi
 
 
 for filez in $@;
@@ -141,6 +178,7 @@ cat <<EOF >> $destdir/$family.css
  font-family: '${family}';
  font-style: ${style};
  font-weight: ${size};
+ font-display: ${displayStrategy}
  src: url('${basename}.eot');
  src: local('${basename}'),
   url('${basename}.eot?#iefix') format('embedded-opentype'),
