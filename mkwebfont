@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+#   Copyright 2017 Marco Bignami
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+
+failsafe=1
+while getopts d:f: opt
+do
+{
+	failsafe=0
+	case "$opt" in
+		f)	family="$OPTARG";;
+		d)	destdir=`realpath "$OPTARG"`;;
+		[?])	printf >&2 "Usage: $0 -d outputdir -f font-family files...\n"
+			exit 1;;
+	esac
+}
+done
+
+if [ $failsafe -gt 0 ]; then
+{
+	printf >&2 "Usage: $0 -d outputdir -f font-family files...\n"
+	exit 1
+}
+fi
+
+shift 4
+
+
+for filez in $@;
+do
+{
+fullfile=$(realpath "$filez")
+filename=$(basename "$fullfile")
+extension="${filename##*.}"
+basename="${filename%.*}"
+
+cp $fullfile $destdir
+
+case "$extension" in
+	eot)
+		eot2ttf $destdir/$filename $destdir/${basename}.ttf
+		font2svg $destdir/$basename.ttf
+		font2woff $destdir/$basename.ttf
+		font2otf $destdir/$basename.ttf
+		woff2_compress $destdir/$basename.ttf
+		;;
+	ttf)
+		font2svg $destdir/$filename
+		font2woff $destdir/$filename
+		font2otf $destdir/$filename
+		ttf2eot $destdir/$filename $destdir/${basename}.eot
+		woff2_compress $destdir/$filename
+		;;
+	svg)
+		font2ttf $destdir/$filename
+		font2woff $destdir/$filename
+		font2otf $destdir/$filename
+		ttf2eot $destdir/$basename.ttf $destdir/${basename}.eot
+		woff2_compress $destdir/$basename.ttf
+		;;
+	otf)
+		font2ttf $destdir/$filename
+		font2woff $destdir/$filename
+		font2svg $destdir/$filename
+		ttf2eot $destdir/$basename.ttf $destdir/${basename}.eot
+		woff2_compress $destdir/$basename.ttf
+		;;
+	woff)
+		font2svg $destdir/$filename
+		font2ttf $destdir/$filename
+		font2otf $destdir/$filename
+		ttf2eot $destdir/$basename.ttf $destdir/${basename}.eot
+		woff2_compress $destdir/$basename.ttf
+		;;
+	woff2)
+		woff2_decompress $destdir/$filename
+		font2svg $destdir/$basename.ttf
+		font2woff $destdir/$basename.tff
+		font2otf $destdir/$basename.tff
+		ttf2eot $destdir/$basename.ttf $destdir/${basename}.eot
+		;;
+esac
+
+case "${basename,,}" in
+	*italic*)
+		style='italic'
+		;;
+	*oblique*)
+		style='oblique'
+		;;
+	*)
+		style='normal'
+		;;
+esac
+
+case "${basename,,}" in
+	*black*|*heavy*)
+		size='900'
+		;;
+	*thin*|*hair*)
+		size='100'
+		;;
+	*extrabold*|*ultrabold*)
+		size='800'
+		;;
+	*semibold*|*demibold*)
+		size='600'
+		;;
+	*extralight*|*ultralight*)
+		size='200'
+		;;
+	*bold*)
+		size='700'
+		;;
+	*medium*)
+		size='500'
+		;;
+	*light*)
+		size='300'
+		;;
+	*)
+		size='400'
+		;;
+esac
+
+cat <<EOF >> $destdir/$family.css
+@font-face {
+ font-family: '${family}';
+ font-style: ${style};
+ font-weight: ${size};
+ src: url('${basename}.eot');
+ src: local('${basename}'),
+  url('${basename}.eot?#iefix') format('embedded-opentype'),
+  url('${basename}.woff2') format('woff2'),
+  url('${basename}.woff') format('woff'),
+  url('${basename}.otf') format('opentype'),
+  url('${basename}.ttf') format('truetype'),
+  url('${basename}.svg#${basename}') format('svg');
+}
+EOF
+
+}
+done
+
