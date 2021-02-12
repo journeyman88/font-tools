@@ -16,6 +16,7 @@
 #
 
 import fontforge
+import os
 
 for filename in sys.argv[1:]:
     font = fontforge.open(filename)
